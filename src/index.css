@@ -1,0 +1,326 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  }
+}
+
+/* Sepia Theme Variables */
+.theme-sepia {
+  background-color: #fbf7ee !important;
+  color: #433422 !important;
+}
+.theme-sepia aside, 
+.theme-sepia header,
+.theme-sepia #editor-toolbar {
+  background-color: #f3ecdb !important;
+  border-color: #e5dac4 !important;
+}
+.theme-sepia #markdown-preview-container,
+.theme-sepia textarea {
+  background-color: #fbf7ee !important;
+  color: #3b2c1c !important;
+}
+
+/* Markdown Rendering Typography */
+.markdown-body h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(150, 150, 150, 0.2);
+}
+
+.markdown-body h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.5rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(150, 150, 150, 0.15);
+}
+
+.markdown-body h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.35rem;
+  line-height: 1.6;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body hr {
+  border: 0;
+  height: 1px;
+  background: rgba(150, 150, 150, 0.25);
+  margin: 2rem 0;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid #3b82f6;
+  padding: 0.5rem 1rem;
+  margin: 1.25rem 0;
+  font-style: italic;
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(150, 150, 150, 0.2);
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba(150, 150, 150, 0.2);
+  text-align: left;
+}
+
+.markdown-body th {
+  background-color: rgba(150, 150, 150, 0.1);
+  font-weight: 600;
+}
+
+.markdown-body a {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown-body a:hover {
+  color: #2563eb;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.markdown-body code:not(pre code) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875em;
+  padding: 0.15em 0.35em;
+  border-radius: 0.3rem;
+  background-color: rgba(120, 120, 120, 0.15);
+}
+
+/* Prism Syntax Highlighting */
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #8892b0; font-style: italic; }
+.token.punctuation { color: #a6accd; }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #f78c6c; }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #c3e88d; }
+.token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #89ddff; }
+.token.atrule, .token.attr-value, .token.keyword { color: #c792ea; }
+.token.function, .token.class-name { color: #82aaff; }
+.token.regex, .token.important, .token.variable { color: #ecc48d; }
+
+/* Interactive checkbox inside task lists */
+.markdown-body input[type="checkbox"] {
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2563eb;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════════
+   PRINT STYLES
+   ═══════════════════════════════════════════ */
+
+/* Page Size Presets — body class sets CSS custom properties */
+body.print-page-letter { --print-page-w: 215.9mm; --print-page-h: 279.4mm; }
+body.print-page-a4 { --print-page-w: 210mm; --print-page-h: 297mm; }
+body.print-page-a3 { --print-page-w: 297mm; --print-page-h: 420mm; }
+body.print-page-legal { --print-page-w: 215.9mm; --print-page-h: 355.6mm; }
+body.print-page-1080x1920 { --print-page-w: 283.46mm; --print-page-h: 503.04mm; }
+body.print-page-custom {
+  --print-page-w: var(--custom-page-w, 210mm);
+  --print-page-h: var(--custom-page-h, 297mm);
+}
+
+@media print {
+  /* ── Page size from body class custom properties ── */
+  @page {
+    size: var(--print-page-w, 210mm) var(--print-page-h, 297mm);
+    margin-top: 35mm !important;
+    margin-bottom: 25mm !important;
+    margin-left: 15mm;
+    margin-right: 15mm;
+  }
+
+  /* ── Hide app chrome ── */
+  #app-header,
+  #app-sidebar,
+  #editor-toolbar,
+  #editor-pane-container,
+  #mobile-layout-pills,
+  button,
+  .btn-copy-code,
+  .fixed {
+    display: none !important;
+  }
+
+  /* ── Root & preview reset ── */
+  html, body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #markdown-preview-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .markdown-body {
+    max-width: 100% !important;
+    color: black !important;
+  }
+
+  /* ── Table wrapping ── */
+  .markdown-body table {
+    table-layout: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    break-inside: auto !important;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    hyphens: auto !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .markdown-body tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* ── Page break control ── */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  blockquote, pre, table, img, .code-block-wrapper {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  li {
+    break-inside: avoid !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    break-inside: avoid !important;
+  }
+
+  /* ── Repeating Header (top of every page) ── */
+  #preview-header-bar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    display: flex !important;
+    visibility: visible !important;
+    background: white !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 8px 16px !important;
+    font-size: 11px !important;
+    color: #6b7280 !important;
+    z-index: 1000 !important;
+  }
+
+  /* ── Repeating Footer (bottom of every page) ── */
+  #preview-footer-bar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    display: flex !important;
+    visibility: visible !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    padding: 8px 16px !important;
+    font-size: 11px !important;
+    color: #6b7280 !important;
+    z-index: 1000 !important;
+  }
+}

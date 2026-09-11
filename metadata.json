@@ -1,0 +1,6 @@
+{
+  "name": "Markdown Editor",
+  "description": "A minimalist, real-time Markdown editor with live preview, syntax highlighting, PDF & image export, document version history, client encryption, and Google Drive cloud synchronization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
