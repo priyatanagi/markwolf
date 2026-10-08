@@ -103,7 +103,7 @@ const MATERIAL_ICONS: { name: string; label: string; keywords: string[] }[] = [
   { name: 'delete', label: 'Trash', keywords: ['delete', 'remove', 'bin'] },
   { name: 'edit', label: 'Pen', keywords: ['edit', 'write', 'draw'] },
   { name: 'draw', label: 'Pencil', keywords: ['edit', 'write', 'draft'] },
-  { name: 'eraser', label: 'Eraser', keywords: ['delete', 'remove', 'clear'] },
+  { name: 'ink_eraser', label: 'Eraser', keywords: ['delete', 'remove', 'clear', 'eraser'] },
   { name: 'person', label: 'User', keywords: ['person', 'account', 'profile'] },
   { name: 'group', label: 'Users', keywords: ['people', 'team', 'group'] },
   { name: 'handshake', label: 'Handshake', keywords: ['deal', 'agreement', 'partner'] },
