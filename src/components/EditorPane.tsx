@@ -10,6 +10,8 @@ interface EditorPaneProps {
   onScroll?: (e: React.UIEvent<HTMLTextAreaElement>) => void;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   onKeyDownShortcut?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPasteEvent?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  onNotify?: (message: string) => void;
   isEncryptedLocked?: boolean;
   onUnlockRequest?: () => void;
 }
@@ -23,6 +25,8 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   onScroll,
   textareaRef,
   onKeyDownShortcut,
+  onPasteEvent,
+  onNotify,
   isEncryptedLocked = false,
   onUnlockRequest,
 }) => {
@@ -134,22 +138,64 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
     }
   }, [fontSize]);
 
-  // File drag & drop support
+  // File drag & drop: insert text files at cursor with visual drop-zone feedback
+  const [isDragOverFiles, setIsDragOverFiles] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragOverFiles(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOverFiles(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.includes('text') || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
+    setIsDragOverFiles(false);
+
+    const textarea = activeRef.current;
+    const start = textarea ? textarea.selectionStart : value.length;
+    const end = textarea ? textarea.selectionEnd : value.length;
+
+    Array.from(e.dataTransfer.files).forEach((file) => {
+      const isTextLike =
+        file.type.startsWith('text/') || /\.(md|markdown|txt)$/i.test(file.name);
+
+      if (/\.docx?$/i.test(file.name)) {
+        onNotify?.(`"${file.name}" is a Word file — copy-paste its content or export it as Markdown first`);
+        return;
+      }
+      if (isTextLike) {
+        if (file.size > 500 * 1024) {
+          onNotify?.(`"${file.name}" is ${(file.size / 1024).toFixed(0)} KB — too large to drop. Import it from the sidebar instead.`);
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (event) => {
           const content = event.target?.result;
-          if (typeof content === 'string') {
-            onChange(content);
-          }
+          if (typeof content !== 'string') return;
+          const insertion = `\n\n${content.trim()}\n`;
+          onChange(value.substring(0, start) + insertion + value.substring(end));
+          onNotify?.(`Inserted "${file.name}" at cursor`);
+          requestAnimationFrame(() => {
+            if (!textarea) return;
+            const pos = start + insertion.length;
+            textarea.focus();
+            textarea.setSelectionRange(pos, pos);
+          });
         };
+        reader.onerror = () => onNotify?.(`Could not read "${file.name}" as UTF-8 text`);
         reader.readAsText(file);
+      } else {
+        onNotify?.(`"${file.name}" is not a text file — dropped files must be .md, .markdown or .txt`);
       }
-    }
+    });
   };
 
   if (isEncryptedLocked) {
@@ -179,10 +225,20 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   return (
     <div
       id="editor-pane-container"
-      className="relative h-full flex flex-col bg-zinc-50/40 dark:bg-zinc-900/40 overflow-hidden"
-      onDragOver={(e) => e.preventDefault()}
+      className={`relative h-full flex flex-col bg-zinc-50/40 dark:bg-zinc-900/40 overflow-hidden transition-shadow ${
+        isDragOverFiles ? 'ring-2 ring-inset ring-blue-400/70 dark:ring-blue-500/60' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {isDragOverFiles && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-50/40 dark:bg-blue-950/30 border-2 border-dashed border-blue-400/70 dark:border-blue-500/50 rounded-sm pointer-events-none">
+          <span className="px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-zinc-900/80 rounded-lg shadow-xs">
+            Drop .md / .txt file to insert at cursor
+          </span>
+        </div>
+      )}
       <div className="relative flex-1 flex overflow-hidden">
         {/* Line Numbers */}
         {showLineNumbers && (
@@ -205,6 +261,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
           ref={activeRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onPaste={onPasteEvent}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
           onKeyUp={updateCursorPosition}

@@ -683,6 +683,32 @@ export async function copyRichTextToClipboard(html: string, plainText: string): 
   }
 }
 
+export async function readClipboardContent(): Promise<{ text: string; html: string | null }> {
+  if (navigator.clipboard && window.ClipboardItem) {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        if (item.types.includes('text/html')) {
+          const html = await item.getType('text/html').then((blob) => blob.text());
+          const text = item.types.includes('text/plain')
+            ? await item.getType('text/plain').then((blob) => blob.text())
+            : '';
+          return { text, html };
+        }
+      }
+    } catch {
+      // Permission denied or unsupported — fall through to readText
+    }
+  }
+
+  if (navigator.clipboard?.readText) {
+    const text = await navigator.clipboard.readText();
+    return { text, html: null };
+  }
+
+  throw new Error('Clipboard read is not supported in this browser');
+}
+
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (m) => {
     switch (m) {

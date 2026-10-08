@@ -18,6 +18,8 @@ import {
   Minus,
   Undo2,
   Redo2,
+  ClipboardPaste,
+  ClipboardCopy,
   Clock,
   Smile,
   Palette,
@@ -26,6 +28,8 @@ import { Tooltip } from './Tooltip';
 
 interface ToolbarProps {
   onInsertMarkdown: (prefix: string, suffix?: string, defaultText?: string) => void;
+  onPasteRich?: () => void;
+  onPastePlain?: () => void;
   onOpenCodeSnippetModal?: () => void;
   onOpenTableWizard?: () => void;
   onOpenEmojiPicker?: () => void;
@@ -41,6 +45,8 @@ interface ToolbarProps {
 
 export const Toolbar: React.FC<ToolbarProps> = ({
   onInsertMarkdown,
+  onPasteRich,
+  onPastePlain,
   onOpenCodeSnippetModal,
   onOpenTableWizard,
   onOpenEmojiPicker,
@@ -102,6 +108,36 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <Redo2 size={15} />
           </button>
         </Tooltip>
+
+        {onPasteRich && onPastePlain && (
+          <>
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 mx-1.5" />
+
+            <Tooltip content="Paste (convert formatting to Markdown)" shortcut="Clipboard">
+              <button
+                id="tb-btn-paste-rich"
+                type="button"
+                onClick={onPasteRich}
+                aria-label="Paste and convert formatting to Markdown"
+                className="p-1.5 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <ClipboardPaste size={15} />
+              </button>
+            </Tooltip>
+
+            <Tooltip content="Paste as plain text" shortcut="Ctrl+Shift+V">
+              <button
+                id="tb-btn-paste-plain"
+                type="button"
+                onClick={onPastePlain}
+                aria-label="Paste as plain text"
+                className="p-1.5 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <ClipboardCopy size={15} />
+              </button>
+            </Tooltip>
+          </>
+        )}
 
         <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700 mx-1.5" />
 
