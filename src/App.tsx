@@ -23,6 +23,7 @@ import {
   copyRichTextToClipboard,
   printDocument,
   copyTextToClipboard,
+  readClipboardContent,
 } from './services/exportUtils';
 import { encryptText, decryptText } from './services/crypto';
 import { Header } from './components/Header';
@@ -38,11 +39,13 @@ import { HeaderFooterModal } from './components/HeaderFooterModal';
 import { ExportModal } from './components/ExportModal';
 import { InlineCssModal } from './components/InlineCssModal';
 import { ConfirmModal } from './components/ConfirmModal';
+import { ImportOptionsModal, ImportMode } from './components/ImportOptionsModal';
 import { CodeSnippetModal } from './components/CodeSnippetModal';
 import { TableWizardModal } from './components/TableWizardModal';
 import { EmojiIconPickerModal } from './components/EmojiIconPickerModal';
 import { autoCapitalizeSentences } from './utils/markdownUtils';
-import { Check, FileCode, Square } from 'lucide-react';
+import { htmlToMarkdown } from './utils/htmlToMarkdown';
+import { Check, FileCode, Square, AlertTriangle } from 'lucide-react';
 
 export default function App() {
   // Application Data State
@@ -95,12 +98,17 @@ export default function App() {
   // Delete confirmation
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
 
+  // Import flow: oversize confirm -> import options
+  const [pendingOversizeImport, setPendingOversizeImport] = useState<File | null>(null);
+  const [importCandidate, setImportCandidate] = useState<{ file: File; content: string } | null>(null);
+
   // Undo / Redo history stack for current editor
   const [historyStack, setHistoryStack] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   // Refs for scrolling and export
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const shiftHeldAtRef = useRef(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const isScrollingSyncRef = useRef<boolean>(false);
 
@@ -125,9 +133,11 @@ export default function App() {
     return Boolean(currentDoc?.isEncrypted && decryptedCache[currentDoc.id] === undefined);
   }, [currentDoc, decryptedCache]);
 
-  // Show temporary toast
-  const showToast = useCallback((msg: string) => {
+  // Toast notification ('info' renders as success check, 'error' as warning)
+  const [toastKind, setToastKind] = useState<'info' | 'error'>('info');
+  const showToast = useCallback((msg: string, kind: 'info' | 'error' = 'info') => {
     setToastMessage(msg);
+    setToastKind(kind);
     setTimeout(() => {
       setToastMessage((current) => (current === msg ? null : current));
     }, 3000);
@@ -151,6 +161,19 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, [showToast]);
+
+  // Track Shift so Ctrl+Shift+V pastes plain text (ClipboardEvent exposes no modifiers)
+  useEffect(() => {
+    const trackShift = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldAtRef.current = e.type === 'keydown' ? Date.now() : 0;
+    };
+    window.addEventListener('keydown', trackShift);
+    window.addEventListener('keyup', trackShift);
+    return () => {
+      window.removeEventListener('keydown', trackShift);
+      window.removeEventListener('keyup', trackShift);
+    };
+  }, []);
 
   // Theme application
   useEffect(() => {
@@ -383,6 +406,59 @@ export default function App() {
     }, 10);
   };
 
+  const insertAtCursor = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      handleContentChange(activeContent + text);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    handleContentChange(textarea.value.substring(0, start) + text + textarea.value.substring(end));
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + text.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 10);
+  };
+
+  // Paste handling: Ctrl+Shift+V forces plain text; normal paste converts HTML to Markdown
+  const handlePasteEvent = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    const plain = e.clipboardData.getData('text/plain');
+    if (!html) return; // plain clipboard — default browser paste is fine
+
+    e.preventDefault();
+    const forcePlain = Date.now() - shiftHeldAtRef.current < 1000;
+    shiftHeldAtRef.current = 0;
+
+    if (forcePlain) {
+      insertAtCursor(plain);
+      showToast('Pasted as plain text');
+    } else {
+      insertAtCursor(htmlToMarkdown(html));
+      showToast('Rich formatting converted to Markdown');
+    }
+  };
+
+  const runToolbarPaste = async (plainOnly: boolean) => {
+    shiftHeldAtRef.current = 0;
+    try {
+      const { text, html } = await readClipboardContent();
+      if (plainOnly || !html) {
+        insertAtCursor(text);
+        showToast(text ? 'Pasted as plain text' : 'Clipboard is empty');
+      } else {
+        insertAtCursor(htmlToMarkdown(html));
+        showToast('Rich formatting converted to Markdown');
+      }
+    } catch {
+      showToast('Clipboard unavailable — use Ctrl+V (or Ctrl+Shift+V for plain text)', 'error');
+    }
+  };
+
   // Document Management
   const handleCreateDoc = () => {
     const newDoc: Doc = {
@@ -524,14 +600,39 @@ export default function App() {
     });
   };
 
-  const handleImportFile = (file: File) => {
+  const startImportFlow = (file: File) => {
+    if (/\.docx?$/i.test(file.name)) {
+      showToast('Word documents are not supported directly — copy-paste the content, or export from Word as Markdown/text', 'error');
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      setPendingOversizeImport(file);
+      return;
+    }
+    readFileForImport(file);
+  };
+
+  const readFileForImport = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target?.result as string;
-      const cleanTitle = file.name.replace(/\.[^/.]+$/, '');
+      const content = (e.target?.result as string) || '';
+      setImportCandidate({ file, content });
+    };
+    reader.onerror = () => showToast(`Could not read "${file.name}" as UTF-8 text`, 'error');
+    reader.readAsText(file);
+  };
+
+  const handleImportFile = (file: File) => startImportFlow(file);
+
+  const handleImportChoose = (mode: ImportMode) => {
+    if (!importCandidate) return;
+    const { file, content } = importCandidate;
+    setImportCandidate(null);
+
+    if (mode === 'new') {
       const newDoc: Doc = {
         id: 'doc_' + Date.now(),
-        title: cleanTitle,
+        title: file.name.replace(/\.[^/.]+$/, ''),
         content: content || '',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -543,9 +644,36 @@ export default function App() {
       setDocs(updated);
       saveDocs(updated);
       setActiveDocId(newDoc.id);
-      showToast(`Imported "${file.name}"`);
+      showToast(`Imported "${file.name}" as a new document`);
+      return;
+    }
+
+    if (!currentDoc || isEncryptedLocked) {
+      showToast('Open an unlocked document to append or replace', 'error');
+      return;
+    }
+
+    const markImported = () => {
+      setDocs((prev) => {
+        const updated = prev.map((d) =>
+          d.id === currentDoc.id && !d.tags?.includes('imported')
+            ? { ...d, tags: [...(d.tags || []), 'imported'] }
+            : d
+        );
+        saveDocs(updated);
+        return updated;
+      });
     };
-    reader.readAsText(file);
+
+    if (mode === 'append') {
+      markImported();
+      handleContentChange(`${activeContent}\n\n${content.trim()}\n`);
+      showToast(`Imported "${file.name}" — appended to current doc`);
+    } else {
+      markImported();
+      handleContentChange(content || '');
+      showToast(`Imported "${file.name}" — replaced current doc`);
+    }
   };
 
   const handleToggleTask = (taskIndex: number) => {
@@ -902,6 +1030,8 @@ export default function App() {
           {!settings.zenMode && (
             <Toolbar
               onInsertMarkdown={handleInsertMarkdown}
+              onPasteRich={() => runToolbarPaste(false)}
+              onPastePlain={() => runToolbarPaste(true)}
               onOpenCodeSnippetModal={() => setIsCodeSnippetOpen(true)}
               onOpenTableWizard={() => setIsTableWizardOpen(true)}
               onOpenEmojiPicker={() => setIsEmojiPickerOpen(true)}
@@ -937,6 +1067,8 @@ export default function App() {
                 onScroll={handleEditorScroll}
                 textareaRef={textareaRef}
                 onKeyDownShortcut={handleEditorKeyDownShortcut}
+                onPasteEvent={handlePasteEvent}
+                onNotify={showToast}
                 isEncryptedLocked={isEncryptedLocked}
                 onUnlockRequest={() => setIsEncryptionOpen(true)}
               />
@@ -976,7 +1108,11 @@ export default function App() {
           id="app-toast-message"
           className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 text-xs font-medium rounded-lg shadow-xl border border-zinc-800 dark:border-zinc-300 animate-slide-up"
         >
-          <Check size={14} className="text-emerald-400 dark:text-emerald-600" />
+          {toastKind === 'error' ? (
+            <AlertTriangle size={14} className="text-amber-400 dark:text-amber-500" />
+          ) : (
+            <Check size={14} className="text-emerald-400 dark:text-emerald-600" />
+          )}
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1114,6 +1250,35 @@ export default function App() {
         isDestructive={true}
         onConfirm={handleDeleteDocConfirm}
         onCancel={() => setDeleteDocId(null)}
+      />
+
+      {/* Oversize Import Confirmation */}
+      <ConfirmModal
+        isOpen={pendingOversizeImport !== null}
+        title="Large file"
+        message={
+          pendingOversizeImport
+            ? `"${pendingOversizeImport.name}" is ${(pendingOversizeImport.size / 1024).toFixed(0)} KB (over 500 KB). Large imports can feel slow. Continue anyway?`
+            : ''
+        }
+        confirmLabel="Import anyway"
+        onConfirm={() => {
+          const file = pendingOversizeImport;
+          setPendingOversizeImport(null);
+          if (file) readFileForImport(file);
+        }}
+        onCancel={() => setPendingOversizeImport(null)}
+      />
+
+      {/* Import Options */}
+      <ImportOptionsModal
+        isOpen={importCandidate !== null}
+        fileName={importCandidate?.file.name ?? ''}
+        fileSizeBytes={importCandidate?.file.size ?? 0}
+        preview={(importCandidate?.content ?? '').slice(0, 800)}
+        currentDocTitle={isEncryptedLocked ? undefined : currentDoc?.title}
+        onChoose={handleImportChoose}
+        onCancel={() => setImportCandidate(null)}
       />
     </div>
   );
